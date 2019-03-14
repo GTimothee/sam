@@ -1663,24 +1663,30 @@ def write_array_to_file(data_array, to_file, write_offset, benchmark):
     :return: benchmarking params
     """
     data = data_array.tobytes('F')
+    write_time = 0
+    seek_number = 0
+    seek_time = 0
 
-    # write
     if benchmark:
-        write_time = 0
-        seek_number = 0
         t = time()
-    fd = os.open(to_file, os.O_RDWR | os.O_APPEND)
-    os.pwrite(fd, data, write_offset)
-    os.close(fd)
-    if benchmark:
+        to_file = open(to_file, 'a+b')
         write_time += time() - t
+        t = time()
+        to_file.seek(write_offset)
+        seek_time += time()-t
+        t = time()
+        to_file.write(data)
+        write_time += time() - t
+    else:
+        with open(to_file, 'a+b') as to_file:
+            to_file.seek(write_offset)
+            to_file.write(data)
 
     del data_array
     del data
 
     if benchmark:
         seek_number = 2  # 1 for opening file, 1 for seeking into the file
-        seek_time = 0
         return seek_time, write_time, seek_number
     else:
         return
@@ -1699,6 +1705,7 @@ def write_dict_to_file(data_dict,
     :return: benchmarking params
     """
     write_time = 0
+    seek_time = 0
     seek_number = 0
 
     for k in sorted(data_dict.keys()):
@@ -1707,11 +1714,15 @@ def write_dict_to_file(data_dict,
 
         if benchmark:
             t = time()
-            os.pwrite(to_file.fileno(), data_bytes, seek_pos)
+            to_file.seek(seek_pos)
+            seek_time += time() - t
+            t = time()
+            to_file.write(data_bytes)
             write_time += time() - t
             seek_number += 1
         else:
-            os.pwrite(to_file.fileno(), data_bytes, seek_pos)
+            to_file.seek(seek_pos)
+            to_file.write(data_bytes)
 
         del data_dict[k]
         del data_bytes
@@ -1725,9 +1736,6 @@ def write_dict_to_file(data_dict,
         to_file.flush()
         os.fsync(to_file)
 
-    # because we don't use seek(), the seek time is
-    # embedded in the writing time
-    seek_time = 0
     return seek_time, write_time, seek_number
 
 

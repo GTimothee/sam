@@ -438,7 +438,9 @@ class ImageUtils:
                     t = time()
                 data = self.proxy.dataobj[..., start_pos[2]:end_pos[2]]
                 if benchmark:
-                    split_read_time += time() - t
+                    read_time = time() - t
+                    print('read time ', read_time)
+                    split_read_time += read_time
             else:
                 start_pos = list(map(lambda x: int(x), start_pos))
                 end_pos = list(map(lambda x: int(x), end_pos))
@@ -448,7 +450,9 @@ class ImageUtils:
                                           start_pos[1]:end_pos[1],
                                           start_pos[2]:end_pos[2]]
                 if benchmark:
-                    split_read_time += time() - t
+                    read_time = time() - t
+                    print('read time ', read_time)
+                    split_read_time += read_time
 
             # get round
             caches = getRound(end_index,
@@ -541,6 +545,8 @@ class ImageUtils:
                                           split_nb_seeks,
                                           benchmark,
                                           num_splits))
+                print('cumul write time: ', split_write_time)
+                print('cumul read time: ', split_read_time)
             else:
                 start_index, split_names = (loop_(split_names,
                                                   start_index,
@@ -731,7 +737,9 @@ class ImageUtils:
             data_in_range =  \
                 self.proxy.dataobj[..., int(from_x_index): int(to_x_index)]
             if benchmark:
-                split_read_time += time() - t
+                read_time = time() -t
+                print('read time ', read_time)
+                split_read_time += read_time
                 split_nb_seeks += 1
 
             one_round_split_metadata = get_metadata_multiple(split_indexes,
@@ -983,6 +991,7 @@ class ImageUtils:
                                           x_size,
                                           input_compressed,
                                           benchmark)
+            print('read time ', read_time)
             merge_read_time += read_time
 
             # write
@@ -996,6 +1005,9 @@ class ImageUtils:
             merge_seek_time += seek_time
             merge_nb_seeks += num_seeks
             merge_write_time += write_time
+
+            print('cumul read time ', merge_read_time)
+            print('cumul write time ', merge_write_time)
 
             remaining_mem = mem
             if start_index <= end_index:
@@ -1047,16 +1059,21 @@ class ImageUtils:
             if benchmark:
                 t = time()
                 split_data = split_im.proxy.get_data()
-                read_time = time() - t  # if input_compressed:
+                read_tmp = time() - t
+                read_time += read_tmp
+                print('tmp read ',read_tmp)
             else:
                 split_data = split_im.proxy.get_data()
 
             # split is a complete slice
             if split_im.split_y == y_size and split_im.split_z == z_size:
-                # t = time()
-                data = split_data.tobytes('F')
-                '''if not input_compressed:
-                    read_time += time() - t'''
+                if benchmark:
+                    t = time()
+                    data = split_data.tobytes('F')
+                    read_time += time() - t
+                else:
+                    data = split_data.tobytes('F')
+
                 key = (split_pos[0] +
                        split_pos[1] * y_size +
                        split_pos[2] * y_size * z_size)
@@ -1066,10 +1083,12 @@ class ImageUtils:
             # WARNING: Untested
             elif split_im.split_y == y_size and split_im.split_z < z_size:
                 for i in xrange(split_im.split_x):
-                    # t = time()
-                    data = split_data[:, :, i].tobytes('F')
-                    '''if not input_compressed:
-                        read_time += time() - t'''
+                    if benchmark:
+                        t = time()
+                        data = split_data[:, :, i].tobytes('F')
+                        read_time += time() - t
+                    else:
+                        data = split_data[:, :, i].tobytes('F')
                     key = (split_pos[0] +
                            (split_pos[1] * y_size) +
                            (split_pos[2] + i) * y_size * z_size)
@@ -1079,10 +1098,12 @@ class ImageUtils:
             else:
                 for i in range(0, split_im.split_x):
                     for j in range(0, split_im.split_z):
-                        # t = time()
-                        data = split_data[:, j, i].tobytes('F')
-                        '''if not input_compressed:
-                            read_time += time() - t'''
+                        if benchmark:
+                            t = time()
+                            data = split_data[:, j, i].tobytes('F')
+                            read_time += time() - t
+                        else:
+                            data = split_data[:, j, i].tobytes('F')
                         key = (split_pos[0] +
                                (split_pos[1] + j) * y_size +
                                (split_pos[2] + i) * y_size * z_size)
@@ -1235,6 +1256,7 @@ class ImageUtils:
                                                    input_compressed, benchmark)
 
                     if benchmark:
+                        print('read time ', read_time_one_r)
                         merge_read_time += read_time_one_r
 
                 elif not found_first_split_in_range:
@@ -1681,6 +1703,7 @@ def write_array_to_file(data_array, to_file, write_offset, benchmark):
     if benchmark:
         seek_number = 2  # 1 for opening file, 1 for seeking into the file
         seek_time = 0
+        print('write time ', write_time)
         return seek_time, write_time, seek_number
     else:
         return
@@ -1716,6 +1739,7 @@ def write_dict_to_file(data_dict,
         del data_dict[k]
         del data_bytes
 
+    """
     if benchmark:
         t = time()
         to_file.flush()
@@ -1724,10 +1748,12 @@ def write_dict_to_file(data_dict,
     else:
         to_file.flush()
         os.fsync(to_file)
+    """
 
     # because we don't use seek(), the seek time is
     # embedded in the writing time
     seek_time = 0
+    print('write time ', write_time)
     return seek_time, write_time, seek_number
 
 

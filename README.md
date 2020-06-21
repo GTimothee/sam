@@ -18,7 +18,7 @@ Currently supports [nii](https://nifti.nimh.nih.gov) format only.
 ```python
 import imageutils as iu
 img = iu.ImageUtils(filepath="/path/to/image.nii")
-img.split(first_dim=770, second_dim=605, third_dim=700,
+img.split_naive(first_dim=770, second_dim=605, third_dim=700,
           local_dir="/path/to/output_dir", filename_prefix="bigbrain")
 ```
 
@@ -29,7 +29,7 @@ img.split(first_dim=770, second_dim=605, third_dim=700,
 # mem = 12g
 import imageutils as iu
 img = iu.ImageUtils(filepath="/path/to/image.nii")
-img.split_multiple_writes(Y_splits=5, Z_splits=5, X_splits=5,
+img.split_multiple(Y_splits=5, Z_splits=5, X_splits=5,
                           out_dir="/path/to/output_dir", mem=12*1024**3,
                           filename_prefix="bigbrain", extension="nii")
 ```
@@ -40,7 +40,7 @@ img.split_multiple_writes(Y_splits=5, Z_splits=5, X_splits=5,
 # mem = 12g
 import imageutils as iu
 img = iu.ImageUtils(filepath="/path/to/image.nii")
-img.split_clustered_writes(Y_splits=5, Z_splits=5, X_splits=5,
+img.split_clustered(Y_splits=5, Z_splits=5, X_splits=5,
                            out_dir="/path/to/output_dir", mem=12*1024**3,
                            filename_prefix="bigbrain", extension="nii")
 ```

@@ -41,3 +41,9 @@ class Nibabel:
         except Exception as e:
             print("ERROR: Unable to load image into nibabel")
             sys.exit(1)
+
+
+    def read_data(self, start_pos, end_pos):
+        return self.proxy.dataobj[start_pos[0]:end_pos[0],
+                                start_pos[1]:end_pos[1],
+                                start_pos[2]:end_pos[2]]

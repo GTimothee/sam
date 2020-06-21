@@ -65,13 +65,18 @@ def clustered_writes(self, Y_splits, Z_splits, X_splits, out_dir,
                 chunks_shape,
                 origarr_shape)
 
-    def getPos(split_names,
+    def getNextBufferInfo(split_names,
                 start_index,
                 chunks_shape,
                 origarr_shape,
                 split_meta_cache,
                 num_splits):
-        ''' A function.
+        ''' 
+        Returns: 
+            start_pos: first corner of buffer
+            end_pos: end corner of buffer
+            start_index: index of first block included in buffer
+            end_index: index of last block included in buffer
         '''
         start_index = int(start_index)
         start_pos = pos_to_int_tuple(
@@ -104,11 +109,15 @@ def clustered_writes(self, Y_splits, Z_splits, X_splits, out_dir,
         '''
         one_round_split_metadata = {}
         x_size, z_size, y_size = chunks_shape
-        for j in range(0, end_index - start_index + 1):
+
+        # for each split file
+        for j in range(0, end_index - start_index + 1):  
             split_start = pos_to_int_tuple(split_ext(split_names
                                                         [start_index + j])
                                             [0].split('_'))
-            split_start = (split_start[0] - start_pos[0],
+
+            # get split slices from buffer
+            split_start = (split_start[0] - start_pos[0],  
                             split_start[1] - start_pos[1],
                             split_start[2] - start_pos[2])
             y_e = split_start[0] + y_size
@@ -136,7 +145,7 @@ def clustered_writes(self, Y_splits, Z_splits, X_splits, out_dir,
         ''' A function.
         '''
         start_pos, end_pos, start_index, end_index = \
-            getPos(split_names,
+            getNextBufferInfo(split_names,
                     start_index,
                     chunks_shape,
                     origarr_shape,
@@ -149,12 +158,13 @@ def clustered_writes(self, Y_splits, Z_splits, X_splits, out_dir,
                                                 end_pos,
                                                 end_index))
 
-        extracted_shape = (end_pos[0] - start_pos[0],
+        if benchmark:
+            # Compute number of seeks
+            extracted_shape = (end_pos[0] - start_pos[0],
                             end_pos[1] - start_pos[1],
                             end_pos[2] - start_pos[2])
+            X_size, Z_size, Y_size = origarr_shape
 
-        X_size, Z_size, Y_size = origarr_shape
-        if benchmark:
             if extracted_shape[0] < Y_size:
                 split_seek_number += \
                     extracted_shape[1] * extracted_shape[2]
@@ -163,29 +173,17 @@ def clustered_writes(self, Y_splits, Z_splits, X_splits, out_dir,
             else:
                 split_seek_number += 1
 
-        # read splits data
-        data = None
-        if (end_pos[0] - start_pos[0] == Y_size
-                and end_pos[1] - start_pos[1] == Z_size):
-            if benchmark:
-                t = time()
-            data = self.proxy.dataobj[..., start_pos[2]:end_pos[2]]
-            if benchmark:
-                read_time = time() - t
-                print('read time ', read_time)
-                split_read_time += read_time
+        # read buffer
+        start_pos = list(map(lambda x: int(x), start_pos))
+        end_pos = list(map(lambda x: int(x), end_pos))
+        if benchmark:
+            t = time()
+            data = file_manager.read_data(start_pos, end_pos)
+            t = time() - t
+            print('buffer read time ', t)
+            split_read_time += t
         else:
-            start_pos = list(map(lambda x: int(x), start_pos))
-            end_pos = list(map(lambda x: int(x), end_pos))
-            if benchmark:
-                t = time()
-            data = self.proxy.dataobj[start_pos[0]:end_pos[0],
-                                        start_pos[1]:end_pos[1],
-                                        start_pos[2]:end_pos[2]]
-            if benchmark:
-                read_time = time() - t
-                print('read time ', read_time)
-                split_read_time += read_time
+            data = file_manager.read_data(start_pos, end_pos)
 
         # get round
         caches = getRound(end_index,
@@ -193,11 +191,10 @@ def clustered_writes(self, Y_splits, Z_splits, X_splits, out_dir,
                             start_pos,
                             split_names,
                             chunks_shape)
-        threaded()
 
         # write split files
-        for round in caches:
-            for i in round:
+        for _round in caches:
+            for i in _round:
                 ix = [int(x) for x in i[1]]
                 split_data = data[ix[0]: ix[1], ix[2]: ix[3], ix[4]: ix[5]]
 
@@ -243,7 +240,7 @@ def clustered_writes(self, Y_splits, Z_splits, X_splits, out_dir,
         origarr_shape) =  \
         get_metadata(filename_prefix, extension, out_dir)
 
-    # manage memory
+    # find number of chunks that can be loaded at a time, given "mem"(=available memory for buffer)
     start_index = end_index = 0
     mem = None if mem is not None and mem == 0 else mem
     num_splits = 0
@@ -300,6 +297,18 @@ def clustered_writes(self, Y_splits, Z_splits, X_splits, out_dir,
     else:
         return
 
+
+def _split_arr(arr, size):
+    # for python3
+    arr = list(arr)
+    arrs = []
+    while len(arr) > size:
+        pice = arr[:size]
+        arrs.append(pice)
+        arr = arr[size:]
+    arrs.append(arr)
+    return arrs
+    
 
 def clustered_reads(self,
                     reconstructed,

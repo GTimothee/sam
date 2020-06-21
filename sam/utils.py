@@ -478,18 +478,6 @@ def pos_to_int_tuple(pos):
     return (int(pos[-3]), int(pos[-2]), int(pos[-1]))
 
 
-def _split_arr(arr, size):
-    # for python3
-    arr = list(arr)
-    arrs = []
-    while len(arr) > size:
-        pice = arr[:size]
-        arrs.append(pice)
-        arr = arr[size:]
-    arrs.append(arr)
-    return arrs
-
-
 get_bytes_per_voxel = {'uint8': np.dtype('uint8').itemsize,
                        'uint16': np.dtype('uint16').itemsize,
                        'uint32': np.dtype('uint32').itemsize,

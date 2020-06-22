@@ -1,4 +1,5 @@
-
+import os 
+import nibabel as nib
 
 class Nibabel:
     def __init__(self, filepath):
@@ -47,3 +48,12 @@ class Nibabel:
         return self.proxy.dataobj[start_pos[0]:end_pos[0],
                                 start_pos[1]:end_pos[1],
                                 start_pos[2]:end_pos[2]]
+
+    
+    def write(to_file, data_array, write_offset, order):
+        data = data_array.tobytes(order)
+        fd = os.open(to_file, os.O_RDWR | os.O_APPEND)
+        os.pwrite(fd, data, write_offset)
+        os.close(fd)
+        del data_array
+        del data

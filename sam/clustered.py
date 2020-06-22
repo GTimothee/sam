@@ -185,7 +185,7 @@ def clustered_writes(self, Y_splits, Z_splits, X_splits, out_dir,
         else:
             data = file_manager.read_data(start_pos, end_pos)
 
-        # get round
+        # get metadata for the split files impacted by current buffer loading
         caches = getRound(end_index,
                             start_index,
                             start_pos,
@@ -298,7 +298,7 @@ def clustered_writes(self, Y_splits, Z_splits, X_splits, out_dir,
         return
 
 
-def _split_arr(arr, size):
+def _split_arr(arr, size):  # TODO comment this function
     # for python3
     arr = list(arr)
     arrs = []
@@ -589,3 +589,27 @@ def insert_elems(self, data_dict, splits, start_index, end_index,
         return read_time
     else:
         return 0
+
+
+def write_array_to_file(data_array, to_file, write_offset, benchmark, order='F'):
+    """
+    :param data_array: consists of consistent data that to bo written to the
+                        file
+    :param to_file: file path
+    :param reconstructed: reconstructed image file to be written
+    :param write_offset: file offset to be written
+    :return: benchmarking params
+    """
+    if benchmark:
+        write_time = 0
+        seek_number = 0
+        t = time()
+        file_manager.write(to_file, data_array, write_offset, order)
+        write_time += time() - t
+        seek_number = 2  # 1 for opening file, 1 for seeking into the file
+        seek_time = 0
+        print('write time ', write_time)
+        return seek_time, write_time, seek_number
+    else:
+        file_manager.write(to_file, data_array, write_offset, order)
+        return

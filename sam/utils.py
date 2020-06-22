@@ -316,38 +316,7 @@ def check_in_range(next_index, index_list):
     return False
 
 
-def write_array_to_file(data_array, to_file, write_offset, benchmark):
-    """
-    :param data_array: consists of consistent data that to bo written to the
-                       file
-    :param to_file: file path
-    :param reconstructed: reconstructed image file to be written
-    :param write_offset: file offset to be written
-    :return: benchmarking params
-    """
-    data = data_array.tobytes('F')
 
-    # write
-    if benchmark:
-        write_time = 0
-        seek_number = 0
-        t = time()
-    fd = os.open(to_file, os.O_RDWR | os.O_APPEND)
-    os.pwrite(fd, data, write_offset)
-    os.close(fd)
-    if benchmark:
-        write_time += time() - t
-
-    del data_array
-    del data
-
-    if benchmark:
-        seek_number = 2  # 1 for opening file, 1 for seeking into the file
-        seek_time = 0
-        print('write time ', write_time)
-        return seek_time, write_time, seek_number
-    else:
-        return
 
 
 def write_dict_to_file(data_dict,
